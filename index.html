@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>스쿨톡</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body { margin:0; font-family:'Apple SD Gothic Neo',Arial,sans-serif; background:#f1f5f9; }
+    header { background:#1e40af; color:#fff; padding:12px; display:flex; justify-content:space-around; }
+    header button { background:none; border:none; color:#fff; font-weight:bold; cursor:pointer; }
+    main { max-width:900px; margin:auto; padding:15px; }
+    .card { background:#fff; padding:16px; border-radius:14px; margin-bottom:20px; box-shadow:0 4px 10px rgba(0,0,0,0.05); }
+    h2 { margin-top:0; color:#1e3a8a; }
+    input, select, textarea { width:100%; padding:9px; margin-top:6px; border-radius:8px; border:1px solid #cbd5e1; }
+    .btn { margin-top:6px; padding:7px 12px; border-radius:8px; border:none; cursor:pointer; background:#2563eb; color:#fff; font-size:13px; }
+    .btn.like { background:#ef4444; }
+    .btn.delete { background:#6b7280; }
+    .post { border-top:1px solid #e5e7eb; padding:10px 0; }
+    .meta { font-size:12px; color:#64748b; }
+    .comment { background:#f8fafc; padding:6px; border-radius:6px; margin-top:4px; font-size:12px; }
+    .hidden { display:none; }
+    @media (max-width:600px){ header{flex-direction:column;gap:6px;text-align:center;} }
+  </style>
+</head>
+<body>
+
+<header>
+  <button onclick="showPage('login')">로그인</button>
+  <button onclick="showPage('find')">학교 선택</button>
+  <button onclick="showPage('board')">게시판</button>
+  <button onclick="showPage('best')">베스트</button>
+</header>
+
+<main>
+
+<div id="login" class="card">
+  <h2>🔐 로그인</h2>
+  <select id="role">
+    <option value="student">학생</option>
+    <option value="admin">관리자</option>
+  </select>
+  <button class="btn" onclick="login()">로그인</button>
+</div>
+
+<div id="find" class="card hidden">
+  <h2>🏫 지역 → 학교 선택</h2>
+  <select id="region" onchange="changeRegion()">
+    <option value="서울">서울</option>
+    <option value="부산">부산</option>
+  </select>
+  <select id="school" onchange="changeSchool()"></select>
+</div>
+
+<div id="board" class="card hidden">
+  <h2 id="schoolTitle"></h2>
+  <div class="meta" id="time"></div>
+
+  <input id="title" placeholder="제목" />
+  <textarea id="content" placeholder="내용"></textarea>
+  <button class="btn" onclick="addPost()">글 작성</button>
+
+  <div id="posts"></div>
+</div>
+
+<div id="best" class="card hidden">
+  <h2>🔥 베스트 게시물</h2>
+  <div id="bestPosts"></div>
+</div>
+
+</main>
+
+<script>
+  let role = 'student';
+  let currentRegion = '서울';
+  let currentSchool = '';
+
+  const schools = {
+    서울:['서울고','서울중'],
+    부산:['동래고','여명중']
+  };
+
+  let data = JSON.parse(localStorage.getItem('schoolTalk')) || {};
+
+  function save(){ localStorage.setItem('schoolTalk', JSON.stringify(data)); }
+
+  function showPage(p){ ['login','find','board','best'].forEach(x=>document.getElementById(x).classList.add('hidden')); document.getElementById(p).classList.remove('hidden'); if(p==='best')renderBest(); }
+
+  function login(){ role=document.getElementById('role').value; alert(role==='admin'?'관리자로 로그인':'학생으로 로그인'); showPage('find'); }
+
+  function changeRegion(){ currentRegion=region.value; school.innerHTML=''; schools[currentRegion].forEach(s=>school.innerHTML+=`<option value="${s}">${s}</option>`); changeSchool(); }
+
+  function changeSchool(){ currentSchool=school.value; if(!data[currentSchool])data[currentSchool]=[]; schoolTitle.innerText=currentSchool+' 게시판'; showPage('board'); renderPosts(); }
+
+  function addPost(){ if(!title.value||!content.value)return alert('입력 필요'); data[currentSchool].push({t:title.value,c:content.value,l:0,cm:[],d:new Date().toLocaleString()}); title.value=''; content.value=''; save(); renderPosts(); }
+
+  function likePost(i){ data[currentSchool][i].l++; save(); renderPosts(); }
+  function addComment(i){ const v=document.getElementById('c'+i).value; if(!v)return; data[currentSchool][i].cm.push(v); save(); renderPosts(); }
+  function delPost(i){ if(role!=='admin')return; if(confirm('삭제?')){ data[currentSchool].splice(i,1); save(); renderPosts(); } }
+
+  function renderPosts(){ posts.innerHTML=''; data[currentSchool].forEach((p,i)=>{ posts.innerHTML+=`<div class='post'><strong>${p.t}</strong><p>${p.c}</p><div class='meta'>🕒 ${p.d} · ❤️ ${p.l}</div><button class='btn like' onclick='likePost(${i})'>좋아요</button>${role==='admin'?`<button class='btn delete' onclick='delPost(${i})'>삭제</button>`:''}<input id='c${i}' placeholder='댓글'><button class='btn' onclick='addComment(${i})'>댓글</button>${p.cm.map(x=>`<div class='comment'>💬 ${x}</div>`).join('')}</div>`; }); time.innerText='현재 시간: '+new Date().toLocaleString(); }
+
+  function renderBest(){ let all=[]; Object.keys(data).forEach(s=>data[s].forEach(p=>all.push({...p,school:s}))); all.sort((a,b)=>b.l-a.l); bestPosts.innerHTML=''; all.forEach((p,i)=>bestPosts.innerHTML+=`<div class='post'>${i+1}위 · ${p.school}<br><strong>${p.t}</strong><div class='meta'>❤️ ${p.l}</div></div>`); }
+
+  changeRegion(); showPage('login');
+</script>
+
+</body>
+</html>
+
